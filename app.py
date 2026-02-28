@@ -1,4 +1,7 @@
 import streamlit as st
+import os
+from dotenv import load_dotenv
+from google import genai
 
 # 活動係数の定義
 activity_map = {
@@ -19,7 +22,37 @@ def calculate_bmr(gender, weight, height, age):
         bmr = 9.247 * weight + 3.098 * height - 4.33 * age + 447.593
 
     return bmr
-   
+
+# 1. 環境変数の読み込み
+load_dotenv()
+api_key = os.getenv("GOOGLE_API_KEY")
+
+# 2. クライアントの初期化
+# 前バージョンの genai.configure ではなく Client オブジェクトを作ります
+client = genai.Client(api_key=api_key)
+
+def get_ai_calories(dish_name):
+    """最新ライブラリを使用したカロリー推定"""
+    prompt = f"""
+    「{dish_name}」の1人前の推定カロリーを教えてください。
+    必ず以下のJSON形式で回答してください。
+    {{
+      "calories": 数値(kcal),
+      "reason": "推定の理由を20文字以内で"
+    }}
+    """
+    
+    try:
+        # 呼び出し方が client.models.generate_content に変わりました
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"{dish_name}の1人前のカロリーを数値だけで教えて"
+        )
+        st.write(f"結果: {response.text}")
+    except Exception as e:
+        st.error(f"AI推定中にエラーが発生しました: {e}")
+        return None
+
 def main():
     # アプリのタイトル
     st.title("🥗 一日の推奨カロリー計算")
@@ -71,6 +104,20 @@ def main():
     # 朝食の有無
     breakdast = st.radio("朝食の有無を選択してください", ["食べた  ", "食べなかった"])
 
+    st.title("AI昼食カロリーチェッカー 🥗")
+
+    dish_name = st.text_input("今日食べた昼食は何ですか？", placeholder="例：カツ丼、冷やし中華など")
+
+    if st.button("AIでカロリーを推定する"):
+        if dish_name:
+            with st.spinner("AIが栄養素を解析中..."):
+                result = get_ai_calories(dish_name)
+                if result:
+                    # 大きな数字で表示
+                    st.metric(label="推定エネルギー", value=f"{result['calories']} kcal")
+                    st.info(f"💡 AIのコメント: {result['reason']}")
+        else:
+            st.warning("料理名を入力してください！")
 
 
 
