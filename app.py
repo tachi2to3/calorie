@@ -2,6 +2,8 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from google import genai
+import json
+import re
 
 # 活動係数の定義
 activity_map = {
@@ -31,26 +33,41 @@ api_key = os.getenv("GOOGLE_API_KEY")
 # 前バージョンの genai.configure ではなく Client オブジェクトを作ります
 client = genai.Client(api_key=api_key)
 
+#食べ物以外を入力したとき＝0kcal
+#複数の料理を入力したとき＝合算したkcal
 def get_ai_calories(dish_name):
     """最新ライブラリを使用したカロリー推定"""
     prompt = f"""
     「{dish_name}」の1人前の推定カロリーを教えてください。
     必ず以下のJSON形式で回答してください。
     {{
-      "calories": 数値(kcal),
-      "reason": "推定の理由を20文字以内で"
+      "calories": 数値のみ（単位なし）
     }}
     """
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
+
+    st.write(f": {response.text} ")#AIの応答文チェック
+
+    json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+
+    if not json_match: #防御型プログラミングの例
+        # ユーザーに状況を伝え、Noneを返して後続の処理をさせない
+        st.error("AIから有効なデータが返ってきませんでした。もう一度試してください。")
+        return None
     
+
     try:
-        # 呼び出し方が client.models.generate_content に変わりました
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=f"{dish_name}の1人前のカロリーを数値だけで教えて"
-        )
-        st.write(f"結果: {response.text}")
+        json_str = json_match.group()
+        data = json.loads(json_str)
+        calories = data["calories"]
+        return calories
+        
     except Exception as e:
         st.error(f"AI推定中にエラーが発生しました: {e}")
+        st.write(f"結果: {response.text}")
         return None
 
 def main():
@@ -102,7 +119,7 @@ def main():
     st.header("3. 食事情報の入力")
 
     # 朝食の有無
-    breakdast = st.radio("朝食の有無を選択してください", ["食べた  ", "食べなかった"])
+    breakfast = st.radio("朝食の有無を選択してください", ["食べた  ", "食べなかった"]) #後で朝食も計算式に入れるときに使う変数
 
     st.title("AI昼食カロリーチェッカー 🥗")
 
@@ -113,9 +130,8 @@ def main():
             with st.spinner("AIが栄養素を解析中..."):
                 result = get_ai_calories(dish_name)
                 if result:
-                    # 大きな数字で表示
-                    st.metric(label="推定エネルギー", value=f"{result['calories']} kcal")
-                    st.info(f"💡 AIのコメント: {result['reason']}")
+                    st.write(f"結果: {result} kcal")
+
         else:
             st.warning("料理名を入力してください！")
 
