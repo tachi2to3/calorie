@@ -58,7 +58,6 @@ def get_lunch_kcal(dish_name):
         contents=prompt
     )
 
-    st.write(f": {response.text} ")#AIの応答文チェック
 
     json_match = re.search(r'\{.*\}', response.text, re.DOTALL) #
 
