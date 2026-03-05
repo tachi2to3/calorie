@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from google import genai
 import json
 import re
+from PIL import Image
 
 # 活動係数の定義
 activity_map = {
@@ -44,25 +45,39 @@ client = genai.Client(api_key=api_key)
 
 #食べ物以外を入力したとき＝0kcal
 #複数の料理を入力したとき＝合算したkcal
-def get_lunch_kcal(dish_name):
-    """最新ライブラリを使用したカロリー推定"""
+def get_lunch_kcal(dish_name, uploaded_file):
+
     prompt = f"""
+    料理名: {dish_name}
+    指示:
     「{dish_name}」の1人前の推定カロリーを教えてください。
     必ず以下のJSON形式で回答してください。
     {{
       "calories": 数値のみ（単位なし）
     }}
     """
+    # payloadに初期値として料理名を追加
+    payload = [prompt]
+
+    # ユーザーが画像ファイルをあげていればGeminiが読める画像オブジェクトに変換
+    # リストpayloadにdish_imgとして追加、プロンプトも追加
+    if uploaded_file is not None:
+        dish_img = Image.open(uploaded_file)
+        payload.append(dish_img)
+        payload[0] += "画像も参考にして、より正確に推定してください。"    
+
+    # 返ってきた応答をresponseに格納
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt
+        contents=payload
     )
 
 
     json_match = re.search(r'\{.*\}', response.text, re.DOTALL) #
 
-    if not json_match: #防御型プログラミングの例
-        # ユーザーに状況を伝え、Noneを返して後続の処理をさせない
+    # ユーザーに状況を伝え、Noneを返して後続の処理をさせないやつ⇒防御型プログラミングの例
+    if not json_match: 
+        
         st.error("AIから有効なデータが返ってきませんでした。もう一度試してください。")
         return None
     
@@ -142,11 +157,20 @@ def main():
     st.title("AI昼食カロリーチェッカー 🥗")
 
     dish_name = st.text_input("今日食べた昼食は何ですか？", placeholder="例：カツ丼、冷やし中華など")
+    
+    # ユーザーからの画像を受け取る
+    uploaded_file = st.file_uploader("料理の写真をアップロードしてください", type=["jpg", "jpeg", "png"])
 
+    if uploaded_file is not None:
+    
+        st.image(uploaded_file, caption="アップロードされた画像", width="stretch")
+
+
+    # AIにプロンプト（あれば画像も）を処理させるボタン
     if st.button("AIでカロリーを推定する"):
         if dish_name:
             with st.spinner("AIが栄養素を解析中..."):
-                lunch_kcal = get_lunch_kcal(dish_name)
+                lunch_kcal = get_lunch_kcal(dish_name, uploaded_file)
                 if lunch_kcal:
                     st.write(f"昼食の推定カロリーは: {lunch_kcal} kcalです")
                     dinner_kcal = calculate_dinner_kcal(tdee, breakfast_kcal, lunch_kcal)
@@ -154,6 +178,10 @@ def main():
 
         else:
             st.warning("料理名を入力してください！")
+
+
+
+
 
 
 
