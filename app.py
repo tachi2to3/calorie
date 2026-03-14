@@ -41,7 +41,7 @@ api_key = os.getenv("GOOGLE_API_KEY")
 
 # 2. クライアントの初期化
 # 前バージョンの genai.configure ではなく Client オブジェクトを作ります
-client = genai.Client(api_key=api_key)
+client = genai.Client(api_key=api_key) # 名前の重複
 
 #食べ物以外を入力したとき＝0kcal
 #複数の料理を入力したとき＝合算したkcal
@@ -59,12 +59,10 @@ def get_lunch_kcal(dish_name, uploaded_file):
     # payloadに初期値として料理名を追加
     payload = [prompt]
 
-    # ユーザーが画像ファイルをあげていればGeminiが読める画像オブジェクトに変換
-    # リストpayloadにdish_imgとして追加、プロンプトも追加
     if uploaded_file is not None:
-        dish_img = Image.open(uploaded_file)
-        payload.append(dish_img)
-        payload[0] += "画像も参考にして、より正確に推定してください。"    
+         # リストpayloadに最適化された画像を追加(append)
+        payload.append(preprocess_image(uploaded_file,max_size=512))
+        payload[0] += "画像も参考にして、より正確に推定してください。"   # プロンプトも追加 
 
     # 返ってきた応答をresponseに格納
     response = client.models.generate_content(
@@ -92,6 +90,16 @@ def get_lunch_kcal(dish_name, uploaded_file):
         st.error(f"AI推定中にエラーが発生しました: {e}")
         st.write(f"結果: {response.text}")
         return None
+    
+# geminiに渡すために画像を軽くする処理。縦横サイズの最大値を512とした。
+def preprocess_image(uploaded_file,max_size=512):
+    # geminiが読み取れるようオブジェクトとして展開
+    optimized_dish_img = Image.open(uploaded_file)
+    # 画像サイズの最大値を設定し解像度を落とす⇒thumbnail((縦,横)) 
+    optimized_dish_img.thumbnail((max_size,max_size)) 
+
+    return optimized_dish_img # 最適化されたファイルを返す
+
 
 #夕食の推奨カロリー計算
 def calculate_dinner_kcal(tdee, breakfast_kcal, lunch_kcal):
@@ -172,9 +180,9 @@ def main():
             with st.spinner("AIが栄養素を解析中..."):
                 lunch_kcal = get_lunch_kcal(dish_name, uploaded_file)
                 if lunch_kcal:
-                    st.write(f"昼食の推定カロリーは: {lunch_kcal} kcalです")
+                    st.success(f"昼食の推定カロリーは: {lunch_kcal} kcalです")
                     dinner_kcal = calculate_dinner_kcal(tdee, breakfast_kcal, lunch_kcal)
-                    st.write(f"夕食の推奨カロリーは: {dinner_kcal} kcalです")
+                    st.success(f"夕食の推奨カロリーは: {dinner_kcal} kcalです")
 
         else:
             st.warning("料理名を入力してください！")
