@@ -183,9 +183,9 @@ def main():
             with st.spinner("AIが栄養素を解析中..."):
                 lunch_kcal = get_lunch_kcal(dish_name, uploaded_file)
                 if lunch_kcal:
-                    st.write(f"昼食の推定カロリーは: {lunch_kcal} kcalです")
+                    st.success(f"昼食の推定カロリーは: {lunch_kcal} kcalです")
                     dinner_kcal = calculate_dinner_kcal(tdee, breakfast_kcal, lunch_kcal)
-                    st.write(f"夕食の推奨カロリーは: {dinner_kcal} kcalです")
+                    st.success(f"夕食の推奨カロリーは: {dinner_kcal} kcalです")
 
         else:
             st.warning("料理名を入力してください！")
