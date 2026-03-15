@@ -129,9 +129,9 @@ def main():
     with col1:
         age = st.number_input("年齢", min_value=0, max_value=120, value=25)
     with col2:
-        height = st.number_input("身長 (cm)", min_value=50.0, max_value=250.0, value=170.0, step=0.1, format="%.1f")
+        height = st.number_input("身長 (cm)", min_value=50.0, max_value=250.0, value=170.0, step=0.5, format="%.1f")
     with col3:
-        weight = st.number_input("体重 (kg)", min_value=10.0, max_value=300.0, value=65.0, step=0.1, format="%.1f")
+        weight = st.number_input("体重 (kg)", min_value=10.0, max_value=300.0, value=65.0, step=0.5, format="%.1f")
 
     # 活動レベルの選択
     activity_level = st.selectbox(
