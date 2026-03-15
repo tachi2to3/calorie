@@ -59,13 +59,10 @@ def get_lunch_kcal(dish_name, uploaded_file):
     # payloadに初期値として料理名を追加
     payload = [prompt]
 
-   
     if uploaded_file is not None:
          # リストpayloadに最適化された画像を追加(append)
         payload.append(preprocess_image(uploaded_file,max_size=512))
         payload[0] += "画像も参考にして、より正確に推定してください。"   # プロンプトも追加 
-
-
 
     # 返ってきた応答をresponseに格納
     response = client.models.generate_content(
