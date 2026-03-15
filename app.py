@@ -126,9 +126,9 @@ def main():
     with col1:
         age = st.number_input("年齢", min_value=0, max_value=120, value=25)
     with col2:
-        height = st.number_input("身長 (cm)", min_value=50.0, max_value=250.0, value=170.0, step=0.1, format="%.1f")
+        height = st.number_input("身長 (cm)", min_value=50.0, max_value=250.0, value=170.0, step=0.5, format="%.1f")
     with col3:
-        weight = st.number_input("体重 (kg)", min_value=10.0, max_value=300.0, value=65.0, step=0.1, format="%.1f")
+        weight = st.number_input("体重 (kg)", min_value=10.0, max_value=300.0, value=65.0, step=0.5, format="%.1f")
 
     # 活動レベルの選択
     activity_level = st.selectbox(
@@ -158,34 +158,43 @@ def main():
     # --- 食事情報入力セクション---
     st.header("3. 食事情報の入力")
 
+
     # 朝食の有無
     breakfast = st.radio("朝食の有無を選択してください", ["食べた", "食べなかった"]) #後で朝食も計算式に入れるときに使う変数
     breakfast_kcal = breakfast_check(breakfast)
 
     st.title("AI昼食カロリーチェッカー 🥗")
 
-    dish_name = st.text_input("今日食べた昼食は何ですか？", placeholder="例：カツ丼、冷やし中華など")
+    dish_name = st.text_input("今日食べた昼食は何ですか？（必須項目）", placeholder="例：カツ丼、冷やし中華など")
     
+
     # ユーザーからの画像を受け取る
-    uploaded_file = st.file_uploader("料理の写真をアップロードしてください", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("料理の写真をアップロードしてください（任意項目）", type=["jpg", "jpeg", "png"])
 
     if uploaded_file is not None:
-    
+
         st.image(uploaded_file, caption="アップロードされた画像", width="stretch")
 
 
     # AIにプロンプト（あれば画像も）を処理させるボタン
-    if st.button("AIでカロリーを推定する"):
-        if dish_name:
-            with st.spinner("AIが栄養素を解析中..."):
-                lunch_kcal = get_lunch_kcal(dish_name, uploaded_file)
-                if lunch_kcal:
-                    st.success(f"昼食の推定カロリーは: {lunch_kcal} kcalです")
-                    dinner_kcal = calculate_dinner_kcal(tdee, breakfast_kcal, lunch_kcal)
-                    st.success(f"夕食の推奨カロリーは: {dinner_kcal} kcalです")
+    if st.button("AIでカロリーを推定する", disabled=not dish_name):
+        
+        with st.spinner("AIが栄養素を解析中..."):
+            lunch_kcal = get_lunch_kcal(dish_name, uploaded_file)
+        
+        if lunch_kcal:
+            st.success(f"昼食の推定カロリーは: {lunch_kcal} kcalです")
+            dinner_kcal = calculate_dinner_kcal(tdee, breakfast_kcal, lunch_kcal)
+            st.success(f"夕食の推奨カロリーは: {dinner_kcal} kcalです")
 
-        else:
-            st.warning("料理名を入力してください！")
+    # 料理名のテキストボックスが空の時に警告を出す
+    if not dish_name:
+        st.warning("料理名を入力してください！")
+
+    # 正しいファイル形式の画像をアップロードして場合は消える警告
+    if uploaded_file is None:
+        st.warning("写真なし、または対応外の形式のファイルがアップロードされています。その場合は料理名のみで推定します。")
+
 
 
 
